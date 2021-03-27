@@ -29,9 +29,14 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * 构建器的基类，建造者模式
+ *
+ * 在本类中维护了Configuration/TypeAliasRegistry/TypeHandlerRegistry 便于子类的使用
  * @author Clinton Begin
  */
 public abstract class BaseBuilder {
+
+  //需要配置，类型别名注册，类型处理器注册3个东西
   protected final Configuration configuration;
   protected final TypeAliasRegistry typeAliasRegistry;
   protected final TypeHandlerRegistry typeHandlerRegistry;

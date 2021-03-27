@@ -66,7 +66,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     this(reader, environment, null);
   }
 
+  /**
+   * 构造函数，转换成XPathParser再去调用构造函数
+   */
   public XMLConfigBuilder(Reader reader, String environment, Properties props) {
+    //构造一个需要验证，XMLMapperEntityResolver的XPathParser
     this(new XPathParser(reader, true, props, new XMLMapperEntityResolver()), environment, props);
   }
 
@@ -83,8 +87,11 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   private XMLConfigBuilder(XPathParser parser, String environment, Properties props) {
+    //首先调用父类初始化Configuration
     super(new Configuration());
+    //错误上下文设置成SQL Mapper Configuration(XML文件配置),以便后面出错了报错用
     ErrorContext.instance().resource("SQL Mapper Configuration");
+    //将Properties全部设置到Configuration里面去
     this.configuration.setVariables(props);
     this.parsed = false;
     this.environment = environment;
@@ -92,10 +99,12 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   public Configuration parse() {
+    //如果已经解析过了，报错
     if (parsed) {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
     parsed = true;
+    //首先解析出configuration
     parseConfiguration(parser.evalNode("/configuration"));
     return configuration;
   }
@@ -103,20 +112,34 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      //properties
       propertiesElement(root.evalNode("properties"));
+      //设置
       Properties settings = settingsAsProperties(root.evalNode("settings"));
+      //自定义虚拟文件系统
       loadCustomVfs(settings);
+      //自定义log实现类
       loadCustomLogImpl(settings);
+      //类型别名
       typeAliasesElement(root.evalNode("typeAliases"));
+      //插件
       pluginElement(root.evalNode("plugins"));
+      //对象工厂
       objectFactoryElement(root.evalNode("objectFactory"));
+      //对象包装工厂
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
+      //反射工厂
       reflectorFactoryElement(root.evalNode("reflectorFactory"));
+      //设置
       settingsElement(settings);
       // read it after objectFactory and objectWrapperFactory issue #631
+      //环境
       environmentsElement(root.evalNode("environments"));
+      //数据库厂商
       databaseIdProviderElement(root.evalNode("databaseIdProvider"));
+      //类型处理器
       typeHandlerElement(root.evalNode("typeHandlers"));
+      //映射器
       mapperElement(root.evalNode("mappers"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);

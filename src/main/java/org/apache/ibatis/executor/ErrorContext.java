@@ -16,11 +16,14 @@
 package org.apache.ibatis.executor;
 
 /**
+ * 错误上下文
  * @author Clinton Begin
  */
 public class ErrorContext {
 
   private static final String LINE_SEPARATOR = System.lineSeparator();
+
+  //每个线程给开一个错误上下文，防止多线程问题
   private static final ThreadLocal<ErrorContext> LOCAL = ThreadLocal.withInitial(ErrorContext::new);
 
   private ErrorContext stored;

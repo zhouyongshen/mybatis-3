@@ -96,6 +96,8 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * Mybatis最核心的一个类，里面是配置及维护一些解析出来的对象信息
+ *
  * @author Clinton Begin
  */
 public class Configuration {
