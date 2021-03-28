@@ -244,6 +244,13 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
+      //如果在这些地方,属性多于一个的话,MyBatis 按照如下的顺序加载它们:
+
+      //1.在 properties 元素体内指定的属性首先被读取。
+      //2.从类路径下资源或 properties 元素的 url 属性中加载的属性第二被读取,它会覆盖已经存在的完全一样的属性。
+      //3.作为方法参数传递的属性最后被读取, 它也会覆盖任一已经存在的完全一样的属性,这些属性可能是从 properties 元素体内和资源/url 属性中加载的。
+      //传入方式是调用构造函数时传入，public XMLConfigBuilder(Reader reader, String environment, Properties props)
+
       Properties defaults = context.getChildrenAsProperties();
       String resource = context.getStringAttribute("resource");
       String url = context.getStringAttribute("url");
