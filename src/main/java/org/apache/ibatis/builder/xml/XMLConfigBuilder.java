@@ -146,6 +146,22 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  //这些是极其重要的调整, 它们会修改 MyBatis 在运行时的行为方式
+  //<settings>
+  //  <setting name="cacheEnabled" value="true"/>
+  //  <setting name="lazyLoadingEnabled" value="true"/>
+  //  <setting name="multipleResultSetsEnabled" value="true"/>
+  //  <setting name="useColumnLabel" value="true"/>
+  //  <setting name="useGeneratedKeys" value="false"/>
+  //  <setting name="enhancementEnabled" value="false"/>
+  //  <setting name="defaultExecutorType" value="SIMPLE"/>
+  //  <setting name="defaultStatementTimeout" value="25000"/>
+  //  <setting name="safeRowBoundsEnabled" value="false"/>
+  //  <setting name="mapUnderscoreToCamelCase" value="false"/>
+  //  <setting name="localCacheScope" value="SESSION"/>
+  //  <setting name="jdbcTypeForNull" value="OTHER"/>
+  //  <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+  //</settings>
   private Properties settingsAsProperties(XNode context) {
     if (context == null) {
       return new Properties();
@@ -254,6 +270,7 @@ public class XMLConfigBuilder extends BaseBuilder {
       Properties defaults = context.getChildrenAsProperties();
       String resource = context.getStringAttribute("resource");
       String url = context.getStringAttribute("url");
+      //resource和url不能同时存在
       if (resource != null && url != null) {
         throw new BuilderException("The properties element cannot specify both a URL and a resource based property file reference.  Please specify one or the other.");
       }
@@ -271,33 +288,65 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * @see <a href="https://mybatis.org/mybatis-3/zh/configuration.html#settings"></a>
+   * @param props
+   */
   private void settingsElement(Properties props) {
+    //下面非常简单，一个个设置属性
+    //如何自动映射列到字段/ 属性
     configuration.setAutoMappingBehavior(AutoMappingBehavior.valueOf(props.getProperty("autoMappingBehavior", "PARTIAL")));
+    //指定发现自动映射目标未知列（或未知属性类型）的行为。
     configuration.setAutoMappingUnknownColumnBehavior(AutoMappingUnknownColumnBehavior.valueOf(props.getProperty("autoMappingUnknownColumnBehavior", "NONE")));
+    //全局性地开启或关闭所有映射器配置文件中已配置的任何缓存。
     configuration.setCacheEnabled(booleanValueOf(props.getProperty("cacheEnabled"), true));
+    //指定 Mybatis 创建可延迟加载对象所用到的代理工具 CGLIB | JAVASSIST	JAVASSIST （MyBatis 3.3 以上）
     configuration.setProxyFactory((ProxyFactory) createInstance(props.getProperty("proxyFactory")));
+    //延迟加载的全局开关。当开启时，所有关联对象都会延迟加载。 特定关联关系中可通过设置 fetchType 属性来覆盖该项的开关状态。
     configuration.setLazyLoadingEnabled(booleanValueOf(props.getProperty("lazyLoadingEnabled"), false));
+    //开启时，任一方法的调用都会加载该对象的所有延迟加载属性。 否则，每个延迟加载属性会按需加载（参考 lazyLoadTriggerMethods)。 （在 3.4.1 及之前的版本中默认为 true）
     configuration.setAggressiveLazyLoading(booleanValueOf(props.getProperty("aggressiveLazyLoading"), false));
+    //是否允许单个语句返回多结果集（需要数据库驱动支持）。
     configuration.setMultipleResultSetsEnabled(booleanValueOf(props.getProperty("multipleResultSetsEnabled"), true));
+    //使用列标签代替列名。实际表现依赖于数据库驱动，具体可参考数据库驱动的相关文档，或通过对比测试来观察。
     configuration.setUseColumnLabel(booleanValueOf(props.getProperty("useColumnLabel"), true));
+    //允许 JDBC 支持自动生成主键，需要数据库驱动支持。如果设置为 true，将强制使用自动生成主键。尽管一些数据库驱动不支持此特性，但仍可正常工作（如 Derby）。
     configuration.setUseGeneratedKeys(booleanValueOf(props.getProperty("useGeneratedKeys"), false));
+    //配置默认的执行器。SIMPLE 就是普通的执行器；REUSE 执行器会重用预处理语句（PreparedStatement）； BATCH 执行器不仅重用语句还会执行批量更新。
     configuration.setDefaultExecutorType(ExecutorType.valueOf(props.getProperty("defaultExecutorType", "SIMPLE")));
+    //设置超时时间，它决定数据库驱动等待数据库响应的秒数。
     configuration.setDefaultStatementTimeout(integerValueOf(props.getProperty("defaultStatementTimeout"), null));
+    //为驱动的结果集获取数量（fetchSize）设置一个建议值。此参数只可以在查询设置中被覆盖
     configuration.setDefaultFetchSize(integerValueOf(props.getProperty("defaultFetchSize"), null));
+    //指定语句默认的滚动策略。
     configuration.setDefaultResultSetType(resolveResultSetType(props.getProperty("defaultResultSetType")));
+    //是否开启驼峰命名自动映射，即从经典数据库列名 A_COLUMN 映射到经典 Java 属性名 aColumn
     configuration.setMapUnderscoreToCamelCase(booleanValueOf(props.getProperty("mapUnderscoreToCamelCase"), false));
+    //是否允许在嵌套语句中使用分页（RowBounds）。如果允许使用则设置为 false。
     configuration.setSafeRowBoundsEnabled(booleanValueOf(props.getProperty("safeRowBoundsEnabled"), false));
+    //MyBatis 利用本地缓存机制（Local Cache）防止循环引用和加速重复的嵌套查询。 默认值为 SESSION，会缓存一个会话中执行的所有查询。 若设置值为 STATEMENT，本地缓存将仅用于执行语句，对相同 SqlSession 的不同查询将不会进行缓存。
     configuration.setLocalCacheScope(LocalCacheScope.valueOf(props.getProperty("localCacheScope", "SESSION")));
+    //当没有为参数指定特定的 JDBC 类型时，空值的默认 JDBC 类型。 某些数据库驱动需要指定列的 JDBC 类型，多数情况直接用一般类型即可，比如 NULL、VARCHAR 或 OTHER。
     configuration.setJdbcTypeForNull(JdbcType.valueOf(props.getProperty("jdbcTypeForNull", "OTHER")));
+    //指定对象的哪些方法触发一次延迟加载。用逗号分隔的方法列表。
     configuration.setLazyLoadTriggerMethods(stringSetValueOf(props.getProperty("lazyLoadTriggerMethods"), "equals,clone,hashCode,toString"));
+    //是否允许在嵌套语句中使用结果处理器（ResultHandler）。如果允许使用则设置为 false。
     configuration.setSafeResultHandlerEnabled(booleanValueOf(props.getProperty("safeResultHandlerEnabled"), true));
+    //指定动态 SQL 生成使用的默认脚本语言
     configuration.setDefaultScriptingLanguage(resolveClass(props.getProperty("defaultScriptingLanguage")));
+    //指定 Enum 使用的默认 TypeHandler 。
     configuration.setDefaultEnumTypeHandler(resolveClass(props.getProperty("defaultEnumTypeHandler")));
+    //指定当结果集中值为 null 的时候是否调用映射对象的 setter（map 对象时为 put）方法，这在依赖于 Map.keySet() 或 null 值进行初始化时比较有用。注意基本类型（int、boolean 等）是不能设置成 null 的。
     configuration.setCallSettersOnNulls(booleanValueOf(props.getProperty("callSettersOnNulls"), false));
+    //允许使用方法签名中的名称作为语句参数名称。 为了使用该特性，你的项目必须采用 Java 8 编译，并且加上 -parameters 选项。（新增于 3.4.1）
     configuration.setUseActualParamName(booleanValueOf(props.getProperty("useActualParamName"), true));
+    //当返回行的所有列都是空时，MyBatis默认返回 null。 当开启这个设置时，MyBatis会返回一个空实例。 请注意，它也适用于嵌套的结果集（如集合或关联）。（新增于 3.4.2）
     configuration.setReturnInstanceForEmptyRow(booleanValueOf(props.getProperty("returnInstanceForEmptyRow"), false));
+    //指定 MyBatis 增加到日志名称的前缀。
     configuration.setLogPrefix(props.getProperty("logPrefix"));
+    //指定一个提供 Configuration 实例的类。 这个被返回的 Configuration 实例用来加载被反序列化对象的延迟加载属性值。 这个类必须包含一个签名为static Configuration getConfiguration() 的方法。（新增于 3.2.3）
     configuration.setConfigurationFactory(resolveClass(props.getProperty("configurationFactory")));
+    //从SQL中删除多余的空格字符。请注意，这也会影响SQL中的文字字符串。 (新增于 3.5.5)
     configuration.setShrinkWhitespacesInSql(booleanValueOf(props.getProperty("shrinkWhitespacesInSql"), false));
     configuration.setDefaultSqlProviderType(resolveClass(props.getProperty("defaultSqlProviderType")));
   }
