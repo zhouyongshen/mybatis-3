@@ -222,6 +222,13 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  //3.插件
+  //MyBatis 允许你在某一点拦截已映射语句执行的调用。默认情况下,MyBatis 允许使用插件来拦截方法调用
+//<plugins>
+//  <plugin interceptor="org.mybatis.example.ExamplePlugin">
+//    <property name="someProperty" value="100"/>
+//  </plugin>
+//</plugins>
   private void pluginElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
