@@ -152,6 +152,8 @@ public class TypeAliasRegistry {
       throw new TypeException("The parameter alias cannot be null");
     }
     // issue #748
+    //如果已经存在key了，且value和之前不一致，报错
+    //这里逻辑略显复杂，感觉没必要，一个key对一个value呗，存在key直接报错不就得了
     String key = alias.toLowerCase(Locale.ENGLISH);
     if (typeAliases.containsKey(key) && typeAliases.get(key) != null && !typeAliases.get(key).equals(value)) {
       throw new TypeException("The alias '" + alias + "' is already mapped to the value '" + typeAliases.get(key).getName() + "'.");
