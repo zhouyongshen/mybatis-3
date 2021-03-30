@@ -91,12 +91,16 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   public void parse() {
+    //如果没有加载过再加载，防止重复加载
     if (!configuration.isResourceLoaded(resource)) {
+      //配置mapper
       configurationElement(parser.evalNode("/mapper"));
+      //标记一下，已经加载过了
       configuration.addLoadedResource(resource);
+      //绑定映射器到namespace
       bindMapperForNamespace();
     }
-
+    //还有没解析完的东东这里接着解析
     parsePendingResultMaps();
     parsePendingCacheRefs();
     parsePendingStatements();
@@ -112,12 +116,19 @@ public class XMLMapperBuilder extends BaseBuilder {
       if (namespace == null || namespace.isEmpty()) {
         throw new BuilderException("Mapper's namespace cannot be empty");
       }
+      //配置namespace
       builderAssistant.setCurrentNamespace(namespace);
+      //配置cache-ref
       cacheRefElement(context.evalNode("cache-ref"));
+      //配置cache
       cacheElement(context.evalNode("cache"));
+      //配置parameterMap(已经废弃,老式风格的参数映射)
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
+      //配置resultMap(高级功能)
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+      //配置sql(定义可重用的 SQL 代码段)
       sqlElement(context.evalNodes("/mapper/sql"));
+      //配置select|insert|update|delete
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. The XML location is '" + resource + "'. Cause: " + e, e);
@@ -133,6 +144,8 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void buildStatementFromContext(List<XNode> list, String requiredDatabaseId) {
     for (XNode context : list) {
+      //构建所有语句,一个mapper下可以有很多select
+      //语句比较复杂，核心都在这里面，所以调用XMLStatementBuilder
       final XMLStatementBuilder statementParser = new XMLStatementBuilder(configuration, builderAssistant, context, requiredDatabaseId);
       try {
         statementParser.parseStatementNode();
@@ -186,7 +199,8 @@ public class XMLMapperBuilder extends BaseBuilder {
       }
     }
   }
-
+  //2.配置cache-ref,在这样的 情况下你可以使用 cache-ref 元素来引用另外一个缓存。
+//<cache-ref namespace="com.someone.application.data.SomeMapper"/>
   private void cacheRefElement(XNode context) {
     if (context != null) {
       configuration.addCacheRef(builderAssistant.getCurrentNamespace(), context.getStringAttribute("namespace"));
@@ -198,7 +212,12 @@ public class XMLMapperBuilder extends BaseBuilder {
       }
     }
   }
-
+  //3.配置cache
+//  <cache
+//  eviction="FIFO"
+//  flushInterval="60000"
+//  size="512"
+//  readOnly="true"/>
   private void cacheElement(XNode context) {
     if (context != null) {
       String type = context.getStringAttribute("type", "PERPETUAL");

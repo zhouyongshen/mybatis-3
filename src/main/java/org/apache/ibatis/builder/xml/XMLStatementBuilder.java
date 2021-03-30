@@ -52,11 +52,25 @@ public class XMLStatementBuilder extends BaseBuilder {
     this.context = context;
     this.requiredDatabaseId = databaseId;
   }
-
+  //解析语句(select|insert|update|delete)
+//<select
+//  id="selectPerson"
+//  parameterType="int"
+//  parameterMap="deprecated"
+//  resultType="hashmap"
+//  resultMap="personResultMap"
+//  flushCache="false"
+//  useCache="true"
+//  timeout="10000"
+//  fetchSize="256"
+//  statementType="PREPARED"
+//  resultSetType="FORWARD_ONLY">
+//  SELECT * FROM PERSON WHERE ID = #{id}
+//</select>
   public void parseStatementNode() {
     String id = context.getStringAttribute("id");
     String databaseId = context.getStringAttribute("databaseId");
-
+    //如果databaseId不匹配，直接返回
     if (!databaseIdMatchesCurrent(id, databaseId, this.requiredDatabaseId)) {
       return;
     }
@@ -95,21 +109,28 @@ public class XMLStatementBuilder extends BaseBuilder {
 
     SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);
     StatementType statementType = StatementType.valueOf(context.getStringAttribute("statementType", StatementType.PREPARED.toString()));
+    //暗示驱动程序每次批量返回的结果行数
     Integer fetchSize = context.getIntAttribute("fetchSize");
+    //超时时间
     Integer timeout = context.getIntAttribute("timeout");
+    //引用外部 parameterMap,已废弃
     String parameterMap = context.getStringAttribute("parameterMap");
+    //结果类型
     String resultType = context.getStringAttribute("resultType");
     Class<?> resultTypeClass = resolveClass(resultType);
+    //引用外部的 resultMap(高级功能)
     String resultMap = context.getStringAttribute("resultMap");
+    //结果集类型，FORWARD_ONLY|SCROLL_SENSITIVE|SCROLL_INSENSITIVE 中的一种
     String resultSetType = context.getStringAttribute("resultSetType");
     ResultSetType resultSetTypeEnum = resolveResultSetType(resultSetType);
     if (resultSetTypeEnum == null) {
       resultSetTypeEnum = configuration.getDefaultResultSetType();
     }
+    //
     String keyProperty = context.getStringAttribute("keyProperty");
     String keyColumn = context.getStringAttribute("keyColumn");
     String resultSets = context.getStringAttribute("resultSets");
-
+    //调用脚手架注册方法
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
         fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
         resultSetTypeEnum, flushCache, useCache, resultOrdered,

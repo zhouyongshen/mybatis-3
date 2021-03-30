@@ -398,6 +398,8 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
     Environment environment = configuration.getEnvironment();
     if (environment != null && databaseIdProvider != null) {
+      //得到当前的databaseId，可以调用DatabaseMetaData.getDatabaseProductName()得到诸如"Oracle (DataDirect)"的字符串，
+      //然后和预定义的property比较,得出目前究竟用的是什么数据库
       String databaseId = databaseIdProvider.getDatabaseId(environment.getDataSource());
       configuration.setDatabaseId(databaseId);
     }
@@ -424,20 +426,30 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
     throw new BuilderException("Environment declaration requires a DataSourceFactory.");
   }
-
+  //9.类型处理器
+//	<typeHandlers>
+//	  <typeHandler handler="org.mybatis.example.ExampleTypeHandler"/>
+//	</typeHandlers>
+//or
+//	<typeHandlers>
+//	  <package name="org.mybatis.example"/>
+//	</typeHandlers>
   private void typeHandlerElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         if ("package".equals(child.getName())) {
+          //调用TypeHandlerRegistry.register，去包下找所有类
           String typeHandlerPackage = child.getStringAttribute("name");
           typeHandlerRegistry.register(typeHandlerPackage);
         } else {
+          //如果是typeHandler
           String javaTypeName = child.getStringAttribute("javaType");
           String jdbcTypeName = child.getStringAttribute("jdbcType");
           String handlerTypeName = child.getStringAttribute("handler");
           Class<?> javaTypeClass = resolveClass(javaTypeName);
           JdbcType jdbcType = resolveJdbcType(jdbcTypeName);
           Class<?> typeHandlerClass = resolveClass(handlerTypeName);
+          //调用TypeHandlerRegistry.register(以下是3种不同的参数形式)
           if (javaTypeClass != null) {
             if (jdbcType == null) {
               typeHandlerRegistry.register(javaTypeClass, typeHandlerClass);
@@ -451,30 +463,61 @@ public class XMLConfigBuilder extends BaseBuilder {
       }
     }
   }
-
+  //	10.1使用类路径
+//	<mappers>
+//	  <mapper resource="org/mybatis/builder/AuthorMapper.xml"/>
+//	  <mapper resource="org/mybatis/builder/BlogMapper.xml"/>
+//	  <mapper resource="org/mybatis/builder/PostMapper.xml"/>
+//	</mappers>
+//
+//	10.2使用绝对url路径
+//	<mappers>
+//	  <mapper url="file:///var/mappers/AuthorMapper.xml"/>
+//	  <mapper url="file:///var/mappers/BlogMapper.xml"/>
+//	  <mapper url="file:///var/mappers/PostMapper.xml"/>
+//	</mappers>
+//
+//	10.3使用java类名
+//	<mappers>
+//	  <mapper class="org.mybatis.builder.AuthorMapper"/>
+//	  <mapper class="org.mybatis.builder.BlogMapper"/>
+//	  <mapper class="org.mybatis.builder.PostMapper"/>
+//	</mappers>
+//
+//	10.4自动扫描包下所有映射器
+//	<mappers>
+//	  <package name="org.mybatis.builder"/>
+//	</mappers>
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         if ("package".equals(child.getName())) {
+          //自动扫描包下所有映射器
           String mapperPackage = child.getStringAttribute("name");
           configuration.addMappers(mapperPackage);
         } else {
+          //10.1使用类路径
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
           String mapperClass = child.getStringAttribute("class");
+          // resource/url/mapperClass不能同时存在
           if (resource != null && url == null && mapperClass == null) {
             ErrorContext.instance().resource(resource);
+            //映射器比较复杂，调用XMLMapperBuilder
+            //在for循环里每个mapper都重新new一个XMLMapperBuilder，来解析
             try(InputStream inputStream = Resources.getResourceAsStream(resource)) {
               XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, resource, configuration.getSqlFragments());
               mapperParser.parse();
             }
           } else if (resource == null && url != null && mapperClass == null) {
+            //使用绝对url路径
             ErrorContext.instance().resource(url);
             try(InputStream inputStream = Resources.getUrlAsStream(url)){
               XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, url, configuration.getSqlFragments());
               mapperParser.parse();
             }
           } else if (resource == null && url == null && mapperClass != null) {
+            //使用java类名
             Class<?> mapperInterface = Resources.classForName(mapperClass);
             configuration.addMapper(mapperInterface);
           } else {
